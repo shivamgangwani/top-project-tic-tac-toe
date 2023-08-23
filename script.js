@@ -70,6 +70,14 @@ const GameBoard = () => {
         return {winningPattern, winningMarker};
     }
 
+    const gameEndCheck = () => {
+        let winner = checkForWinners();
+        let winnerFlag = winner.winningMarker !== "";
+        let boardExhaustedFlag = isBoardFullyMarked();
+        winner.gameOver = winnerFlag || boardExhaustedFlag;
+        return winner;
+    }
+
     const render = () => {
         let newBoardChildren = [];
         squares.forEach((sq) => newBoardChildren.push(sq.createElement()));
@@ -80,8 +88,7 @@ const GameBoard = () => {
         getSquares,
         fillSquare,
         render,
-        isBoardFullyMarked,
-        checkForWinners,
+        gameEndCheck,
         clearBoard
     };
 }
@@ -113,15 +120,6 @@ const GameRound = (playersArr) => {
         });
     }
 
-    const gameEndCheck = () => {
-        let winner = board.checkForWinners();
-        let winnerFlag = winner.winningMarker !== "";
-        let boardExhaustedFlag = board.isBoardFullyMarked();
-        if(!(winnerFlag || boardExhaustedFlag)) gameOver = false;
-        else gameOver = true;
-        return winner;
-    }
-
     const concludeGame = (winnerObj) => {
         let result = document.createElement("h1");
         if(!winnerObj.winningMarker) result.textContent = "Game tied!"
@@ -140,8 +138,8 @@ const GameRound = (playersArr) => {
 
     const render = () => {
         board.render();
-        let winner = gameEndCheck();
-        if(!gameOver) bindEvents();
+        let winner = board.gameEndCheck();
+        if(!winner.gameOver) bindEvents();
         else concludeGame(winner);
     }
 
