@@ -98,10 +98,8 @@ const GameRound = (playersArr) => {
     const board = GameBoard();
     const players = playersArr ? playersArr : [Player("P1", "O"), Player("P2", "X")];
     let playerInTurn;
-    let gameOver;
 
     const init = () => {
-        gameOver = false;
         playerInTurn = players[0];
         render();
     }
