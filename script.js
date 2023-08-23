@@ -32,9 +32,14 @@ const GameBoardSquare = (idx) => {
 const GameBoard = () => {
     const GRID_SIZE = 3;
     const BOARD_EL = document.querySelector("#game div#board");
-    let squares = [];
-    for(let i=0; i<(GRID_SIZE**2); i++) squares.push(GameBoardSquare(i))
+    let squares = generateBlankBoard();
 
+    function generateBlankBoard() {
+        let newSqs = [];
+        for(let i=0; i<(GRID_SIZE**2); i++) newSqs.push(GameBoardSquare(i));
+        return newSqs;
+    }
+    function clearBoard () { squares = generateBlankBoard() };
     const getSquares = () => squares;
     const fillSquare = (squareIndex, marker) => squares[squareIndex].setMark(marker);
     const isBoardFullyMarked = () => !squares.map((sq) => (sq.getMark() === "")).includes(true);
@@ -76,15 +81,23 @@ const GameBoard = () => {
         fillSquare,
         render,
         isBoardFullyMarked,
-        checkForWinners
+        checkForWinners,
+        clearBoard
     };
 }
 
-const GameRound = () => {
+const GameRound = (playersArr) => {
+    const resultDisplay = document.querySelector("#result");
     const board = GameBoard();
-    const players = [Player("P1", "O"), Player("P2", "X")];
-    let gameOver = false;
-    let playerInTurn = players[0];
+    const players = playersArr ? playersArr : [Player("P1", "O"), Player("P2", "X")];
+    let playerInTurn;
+    let gameOver;
+
+    const init = () => {
+        gameOver = false;
+        playerInTurn = players[0];
+        render();
+    }
 
     const nextPlayerInTurn = () => players[(players.indexOf(playerInTurn) + 1) % 2];
     const playMove = (e) => {
@@ -110,15 +123,19 @@ const GameRound = () => {
     }
 
     const concludeGame = (winnerObj) => {
-        if(!winnerObj.winningMarker) console.log("Game tied");
+        let result = document.createElement("h1");
+        if(!winnerObj.winningMarker) result.textContent = "Game tied!"
         else {
-            console.log(`Winner: ${winnerObj.winningMarker}`);
             let sqs = board.getSquares();
             winnerObj.winningPattern.forEach((idx) => {
                 let el = sqs[idx].getElement();
                 el.classList.add('winning-square');
             });
+
+            let winningPlayer = players.filter((i) => i.marker == winnerObj.winningMarker)[0];
+            result.textContent = `${winningPlayer.name} (${winningPlayer.marker}) won the game!`;
         }
+        resultDisplay.replaceChildren(result);
     }
 
     const render = () => {
@@ -128,12 +145,68 @@ const GameRound = () => {
         else concludeGame(winner);
     }
 
-    render();
-    return {playMove};
+    const resetRound = () => {
+        document.querySelector("#board").replaceChildren();
+        resultDisplay.replaceChildren();
+    }
+    init();
+
+    return {playMove,resetRound}
 }
 
-function sampleGame() {
-    const game = GameRound();
-}
+(function Game() {
+    const DOM_CACHE = {
+        userInput : document.querySelector("#game-info")
+    }
+    let Players = [];
+    let CURRENT_ROUND = null;
 
-sampleGame();
+    const resetPlayers = () => {
+        Players = [];
+        DOM_CACHE.userInput.querySelector("input#p1-username").value = "";
+        DOM_CACHE.userInput.querySelector("input#p2-username").value = "";
+    }
+
+    const resetGame = () => {
+        resetPlayers();
+        if(CURRENT_ROUND) CURRENT_ROUND.resetRound();
+        CURRENT_ROUND = null;
+        render();
+    }
+
+    const updatePlayerInformation = () => {
+        // Extract Player Information
+        p1UsernameField = DOM_CACHE.userInput.querySelector("input#p1-username");
+        p1Username = p1UsernameField.value ? p1UsernameField.value : "Player 1";
+        p1UsernameField.value = p1Username;
+
+        p2UsernameField = DOM_CACHE.userInput.querySelector("input#p2-username");
+        p2Username = p2UsernameField.value ? p2UsernameField.value : "Player 2";
+        p2UsernameField.value = p2Username;
+        
+        Players.push(Player(p1Username, "O"));
+        Players.push(Player(p2Username, "X"));
+    }
+
+    const startGame = () => {
+        if(CURRENT_ROUND) resetGame();
+        updatePlayerInformation();
+        CURRENT_ROUND = GameRound(Players);
+        render();
+    };
+
+    const render = () => updateControls();
+
+    const updateControls = () => {
+        let GAME_ON = Boolean(CURRENT_ROUND);
+        DOM_CACHE.userInput.querySelector("#start-game").disabled = GAME_ON;
+        DOM_CACHE.userInput.querySelector("#reset-game").disabled = !GAME_ON;
+    }
+
+    function init() {
+        DOM_CACHE.userInput.querySelector("#start-game").addEventListener('click', startGame);
+        DOM_CACHE.userInput.querySelector("#reset-game").addEventListener('click', resetGame);
+    }
+
+    init();
+})();
