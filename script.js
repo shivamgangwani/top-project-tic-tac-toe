@@ -21,7 +21,6 @@ const GameBoardSquare = (idx) => {
         return el;
     }
     return {
-        idx,
         getMark,
         setMark,
         isMarked,
