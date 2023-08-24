@@ -93,7 +93,7 @@ const GameBoard = () => {
     };
 }
 
-const GameRound = (playersArr) => {
+const GameRound = (playersArr, P2_AI = false) => {
     const resultDisplay = document.querySelector("#result");
     const board = GameBoard();
     const players = playersArr ? playersArr : [Player("P1", "O"), Player("P2", "X")];
@@ -110,6 +110,9 @@ const GameRound = (playersArr) => {
         board.fillSquare(tarSqIdx, playerInTurn.marker);
         playerInTurn = nextPlayerInTurn();
         render();
+        if(playerInTurn === players[1] && P2_AI) {
+            // alert("AI move not implemented yet! Please may manually...");
+        }
     }
 
     const bindEvents = () => {
@@ -155,6 +158,7 @@ const GameRound = (playersArr) => {
         userInput : document.querySelector("#game-info")
     }
     let Players = [];
+    let P2_AI = false;
     let CURRENT_ROUND = null;
 
     const resetPlayers = () => {
@@ -179,6 +183,8 @@ const GameRound = (playersArr) => {
         p2UsernameField = DOM_CACHE.userInput.querySelector("input#p2-username");
         p2Username = p2UsernameField.value ? p2UsernameField.value : "Player 2";
         p2UsernameField.value = p2Username;
+
+        P2_AI = DOM_CACHE.userInput.querySelector("input#p2-ai").checked;
         
         Players.push(Player(p1Username, "O"));
         Players.push(Player(p2Username, "X"));
@@ -187,7 +193,7 @@ const GameRound = (playersArr) => {
     const startGame = () => {
         if(CURRENT_ROUND) resetGame();
         updatePlayerInformation();
-        CURRENT_ROUND = GameRound(Players);
+        CURRENT_ROUND = GameRound(Players, P2_AI);
         render();
     };
 
