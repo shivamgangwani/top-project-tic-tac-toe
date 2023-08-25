@@ -42,7 +42,22 @@ const GameBoard = () => {
     function clearBoard () { squares = generateBlankBoard() };
     const getSquares = () => squares;
     const fillSquare = (squareIndex, marker) => squares[squareIndex].setMark(marker);
-    const isBoardFullyMarked = () => !squares.map((sq) => (sq.getMark() === "")).includes(true);
+    const getAvailableMoves = () => {
+        const availableMoves = [];
+        squares.forEach((sq) => { if(sq.getMark() === "") availableMoves.push(squares.indexOf(sq)) });
+        return availableMoves;
+    }
+    const copyBoard = () => {
+        let newBoard = GameBoard();
+        for(let i =0; i<squares.length; i++) newBoard.fillSquare(i, squares[i].getMark());
+        return newBoard;
+    }
+    const copyAndMove = (index, marker) => {
+        let newBoard = copyBoard();
+        newBoard.fillSquare(index, marker);
+        return newBoard;
+    }
+    const isBoardFullyMarked = () => getAvailableMoves().length === 0;
     const checkForWinners = () => { 
         const WINNER_PATTERNS = [
             // Rows
@@ -89,11 +104,49 @@ const GameBoard = () => {
         fillSquare,
         render,
         gameEndCheck,
-        clearBoard
+        getAvailableMoves,
+        clearBoard,
+        copyAndMove
     };
 }
 
-const GameRound = (playersArr) => {
+const AIMove = () => {
+    const SCORES = {win : 10, lose : -10, tie : 0};
+    const MARKERS = {AI : "X", PLAYER : "O"};
+
+    const getAIScore = (winningMarker) => (winningMarker === "") ? SCORES.tie : (winningMarker === MARKERS.AI ? SCORES.win : SCORES.lose);
+    const minimax = (board, maximizingPlayer) => {
+        // Check if game is over - tie or somebody won
+        let gameStatus = board.gameEndCheck();
+        if(gameStatus.gameOver) return getAIScore(gameStatus.winningMarker);
+
+        // Game is not over, play a move and find its value
+        const poi_marker = maximizingPlayer ? MARKERS.AI : MARKERS.PLAYER;
+        const maxOrMinFn = maximizingPlayer ? Math.max : Math.min;
+        let val = maximizingPlayer ? -Infinity : Infinity;
+
+        board.getAvailableMoves().forEach((move) => {
+            let newBoard = board.copyAndMove(move, poi_marker);
+            let newVal = minimax(newBoard, !maximizingPlayer);
+            val = maxOrMinFn(val, newVal);
+        });
+        return val;
+    }
+
+    // Given a board where the next move is by AI, find the best possible move
+    const findBestMove = (board) => {
+        let bestVal = -Infinity, bestMove = null;
+        board.getAvailableMoves().forEach((move) => {
+            let newBoard = board.copyAndMove(move, MARKERS.AI);
+            let moveVal = minimax(newBoard, false);
+            if(moveVal > bestVal) bestVal = moveVal, bestMove = move;
+        });
+        return bestMove;
+    }
+    return {findBestMove};
+}
+
+const GameRound = (playersArr, P2_AI = false) => {
     const resultDisplay = document.querySelector("#result");
     const board = GameBoard();
     const players = playersArr ? playersArr : [Player("P1", "O"), Player("P2", "X")];
@@ -106,10 +159,21 @@ const GameRound = (playersArr) => {
 
     const nextPlayerInTurn = () => players[(players.indexOf(playerInTurn) + 1) % 2];
     const playMove = (e) => {
+        if(P2_AI && playerInTurn == players[1]) return alert("Wait for the AI to play!");
+
         let tarSqIdx = e.target.getAttribute("data-index");
         board.fillSquare(tarSqIdx, playerInTurn.marker);
         playerInTurn = nextPlayerInTurn();
         render();
+        if(playerInTurn === players[1] && P2_AI && !board.gameEndCheck().gameOver) {
+            setTimeout(() => {
+                    board.fillSquare(AIMove().findBestMove(board), playerInTurn.marker);
+                    playerInTurn = nextPlayerInTurn();
+                    render();
+                },
+                500
+            );
+        }
     }
 
     const bindEvents = () => {
@@ -155,6 +219,7 @@ const GameRound = (playersArr) => {
         userInput : document.querySelector("#game-info")
     }
     let Players = [];
+    let P2_AI = false;
     let CURRENT_ROUND = null;
 
     const resetPlayers = () => {
@@ -176,9 +241,12 @@ const GameRound = (playersArr) => {
         p1Username = p1UsernameField.value ? p1UsernameField.value : "Player 1";
         p1UsernameField.value = p1Username;
 
+        P2_AI = DOM_CACHE.userInput.querySelector("input#p2-ai").checked;
+
         p2UsernameField = DOM_CACHE.userInput.querySelector("input#p2-username");
-        p2Username = p2UsernameField.value ? p2UsernameField.value : "Player 2";
+        p2Username = p2UsernameField.value ? p2UsernameField.value : (P2_AI ? "SkyNet" : "Player 2");
         p2UsernameField.value = p2Username;
+
         
         Players.push(Player(p1Username, "O"));
         Players.push(Player(p2Username, "X"));
@@ -187,7 +255,7 @@ const GameRound = (playersArr) => {
     const startGame = () => {
         if(CURRENT_ROUND) resetGame();
         updatePlayerInformation();
-        CURRENT_ROUND = GameRound(Players);
+        CURRENT_ROUND = GameRound(Players, P2_AI);
         render();
     };
 
